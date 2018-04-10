@@ -15,16 +15,19 @@ parser.add_argument('--threads', type=int, default=3,
 # Data specifications
 parser.add_argument('--upscale', type=int, default=2, 
                     help="super resolution upscale factor")
+parser.add_argument('--dir_datasets', type=str, default='../datasets',
+                    help='dataset directory')
 parser.add_argument('--data_train', type=str, default='B100', 
                     help='train dataset name')
 parser.add_argument('--data_test', type=str, default='B100', 
                     help='test dataset name')
-parser.add_argument('--patch_size', type=int, default=256, 
-                    help='output patch size')
-parser.add_argument('--y_channel', action='store_true',
-                    help='train data only in y channel')
+parser.add_argument('--crop_size', type=int, default=256, 
+                    help='train image crop size')
+parser.add_argument('--n_colors', type=int, default=3,
+                    help='number of color channels to use')
 parser.add_argument('--aug', action='store_true',
                     help='augmention of training data')
+
 
 # Model specifications
 parser.add_argument('--n_resblocks', type=int, default=3, 
@@ -47,7 +50,7 @@ parser.add_argument('--loss', default='Charbonnier',
 # Training specifications
 parser.add_argument('--reset', action='store_true', 
                     help='reset the training')
-parser.add_argument('--load', type=int, default=-1, 
+parser.add_argument('--resume', type=int, default=-1, 
                     help='load the model from the specified epoch')
 parser.add_argument('--log_file', type=str, default='logs', 
                     help='log file name')
@@ -57,7 +60,7 @@ parser.add_argument('--test', action='store_true',
                     help='test the model with data_test')
 parser.add_argument('--pre_train', type=str, default='.', 
                     help='load pre-trained model to test')
-parser.add_argument('--demo', action='store_true', 
-                    help='test the model out of benchmark')
+parser.add_argument('--save', action='store_true', 
+                    help='save the model result')
 args = parser.parse_args()
 print(args)

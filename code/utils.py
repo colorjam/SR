@@ -66,18 +66,21 @@ class checkpoint():
             f.write('\n')
 
     def get_model(self):
+        """Create model and define loss function (criterion) and optimizer"""
         model = Net(self.args)
         pre_train = self.args.pre_train
 
         if pre_train != '.':
-            print('===> Loading model from {}...'.format(pre_train))
+            print('=> Loading model from {}'.format(pre_train))
             model.load_state_dict(torch.load(pre_train, map_location=lambda storage, loc: storage))
+        else:
+            print('=> Building model...')
 
-        load = self.args.load
-        if load > 0:
+        resume = self.args.resume
+        if resume > 0:
             model.load_state_dict(
-                torch.load('{}/model/model_{}.pt'.format(self.dir, load)))
-            print('===> Continue from epoch {}...'.format(load))
+                torch.load('{}/model/model_{}.pt'.format(self.dir, resume)))
+            print('=> Continue from epoch {}...'.format(resume))
         
         # criterion = nn.L1Loss()
         loss = self.args.loss
@@ -101,7 +104,7 @@ class checkpoint():
     
     def save_result(self, idx, save_list):
         filename = '{}/results/{}_'.format(self.dir, idx)
-        postfix = ('LR', 'HR_2x', 'HR_4x', 'SR_2x', 'SR_4x')
+        postfix = ('SR_2x', 'SR_4x', 'LR', 'HR_2x', 'HR_4x', )
         for v, n in zip(save_list, postfix):
             tu.save_image(v.data[0], '{}{}.png'.format(filename, n))
 
