@@ -21,7 +21,6 @@ torch.manual_seed(args.seed)
 if cuda:
     torch.cuda.manual_seed(args.seed)
 
-print('=> Loading datasets...')
 loader = Data(args)
 
 model, criterion, optimizer = ckp.get_model()

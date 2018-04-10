@@ -14,4 +14,11 @@ def img2tensor(l, test, crop_size=256):
                 ToTensor(),
             ])(img)
 
-    return (_img2tensor(i, _l) for i, _l in enumerate(l))
+    return [_img2tensor(i, _l) for i, _l in enumerate(l)]
+
+def img_transform(img, crop_size, upscale=1):
+    return Compose([
+        CenterCrop(crop_size),
+        Resize(crop_size // upscale),
+        ToTensor()
+    ])(img)

@@ -54,6 +54,8 @@ parser.add_argument('--resume', type=int, default=-1,
                     help='load the model from the specified epoch')
 parser.add_argument('--log_file', type=str, default='logs', 
                     help='log file name')
+parser.add_argument('--print_freq', type=int, default=3,
+                    help='frequency of showing training results on console')
 
 # Testing specifications
 parser.add_argument('--test', action='store_true', 

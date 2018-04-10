@@ -49,9 +49,13 @@ class Trainer():
 
             timer_model.hold()
 
-            self.ckp.write_log('=> Epoch[{}]({}/{}): loss: {:.4f} {:.1f}+{:.1f}s'.format(
-                epoch, iteration, len(self.loader_train), loss.data[0], 
-                timer_model.release(), timer_data.release()))
+            if iteration % self.args.print_freq == 0:
+                self.ckp.write_log(
+                    '=> Epoch[{}]({}/{}):\t'
+                    'Loss: {:.4f}\t'
+                    'Time: {:.1f}+{:.1f}s'.format(
+                    epoch, iteration, len(self.loader_train), loss.data[0], 
+                    timer_model.release(), timer_data.release()))
 
             timer_data.tic()
 
@@ -73,11 +77,12 @@ class Trainer():
                 logger.histo_summary(tag, to_np(value), iter)
                 logger.histo_summary(tag + '/grad', to_np(value.grad), iter)
 
+        
         self.ckp.write_log('=> Epoch {} Complete: Avg. loss: {:.4f}'.format(
             epoch, epoch_loss / len(self.loader_train)))
         
     def test(self, epoch=10):
-        self.ckp.write_log('=> Evaluation')
+        self.ckp.write_log('=> Evaluation...')
         timer_test = utils.timer()
         avg_psnr_2x = 0.0
         avg_psnr_4x = 0.0
@@ -118,7 +123,7 @@ class Trainer():
                 tensor = tensor.cuda()
             return Variable(tensor)
 
-        return (_prepare(_l) for _l in l)
+        return [_prepare(_l) for _l in l]
 
   
 
