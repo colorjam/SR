@@ -102,11 +102,11 @@ class Trainer():
                 input, hr_x2, hr_x4 = self.prepare([input, hr_x2, hr_x4])
             else:
                 input = self.prepare([input])[0]
-
             if (self.args.n_colors == 1): # only with y channel
-                input, input_cb, input_cr = utils.rgb2ycbcr(input)
-
-            sr_x2, sr_x4 = self.model(input)
+                input_y, input_cb, input_cr = utils.rgb2ycbcr(input)
+                sr_x2, sr_x4 = self.model(input_y)
+            else:
+                sr_x2, sr_x4 = self.model(input)
 
             if (self.args.n_colors == 1):
                 sr_x2 = utils.ycbcr2rgb(sr_x2, input_cb, input_cr)

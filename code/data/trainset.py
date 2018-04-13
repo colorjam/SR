@@ -2,7 +2,7 @@ from os import listdir
 from os.path import join
 from PIL import Image
 
-from data.common import is_image_file, img_transform
+from data.common import is_image_file, img_transform, set_channel
 
 from torch.utils.data import Dataset
 
@@ -15,6 +15,7 @@ class Trainset(Dataset):
         
     def __getitem__(self, idx):
         hr = Image.open(self.images_hr[idx])
+        hr = set_channel([hr], self.args.n_channel)[0]
         input = img_transform(hr, self.args.crop_size, 4, is_normalize=True)
         target_x2 = img_transform(hr, self.args.crop_size, 2)
         target_x4 = img_transform(hr, self.args.crop_size, 1)

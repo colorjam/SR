@@ -2,7 +2,7 @@ from os import listdir
 from os.path import join
 from PIL import Image
 
-from data.common import is_image_file, img_transform
+from data.common import is_image_file, img_transform, set_channel
 
 from torch.utils.data import Dataset
 from torchvision.transforms import ToTensor, Compose, CenterCrop, Normalize
@@ -35,6 +35,8 @@ class Testset(Dataset):
         lr_x4 = Image.open(self.images_lr_x4[idx])
         lr_x2 = Image.open(self.images_lr_x2[idx])
         hr = Image.open(self.images_hr[idx])
+        lr_x4, lr_x2, hr = set_channel([lr_x4, lr_x2, hr], self.args.n_channel)
+        
         w, h = lr_x2.size
         input, target_x2, target_x4 = ToTensor()(lr_x4), ToTensor()(lr_x2), _transform(hr, (2*h, 2*w))
         return input, target_x2, target_x4
