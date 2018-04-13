@@ -44,8 +44,8 @@ parser.add_argument('--optimizer', default='ADAM',
                     choices=('SGD', 'ADAM', 'RMSprop'),
                     help='optimizer to use (SGD | ADAM | RMSprop)')
 parser.add_argument('--loss', default='Charbonnier', 
-                    choices=('MSE', 'L1', 'Charbonnier'), 
-                    help='loss function to use (MSE | L1 | Charbonnier)')
+                    choices=('MSE', 'L1', 'Charbonnier', 'Perceptual'), 
+                    help='loss function to use (MSE | L1 | Charbonnier | Perceptual)')
 
 # Training specifications
 parser.add_argument('--reset', action='store_true', 

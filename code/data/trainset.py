@@ -15,7 +15,7 @@ class Trainset(Dataset):
         
     def __getitem__(self, idx):
         hr = Image.open(self.images_hr[idx])
-        input = img_transform(hr, self.args.crop_size, 4)
+        input = img_transform(hr, self.args.crop_size, 4, is_normalize=True)
         target_x2 = img_transform(hr, self.args.crop_size, 2)
         target_x4 = img_transform(hr, self.args.crop_size, 1)
 

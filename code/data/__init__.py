@@ -14,7 +14,7 @@ class Data:
                 batch_size=args.train_batch, 
                 shuffle=True
             )
-        
+
         if args.data_test in['Set5', 'Set14', 'B100']:
             module_test = import_module('data.testset')
             test_set = getattr(module_test, 'Testset')(args)

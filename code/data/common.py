@@ -1,24 +1,21 @@
-from torchvision.transforms import Compose, CenterCrop, ToTensor, Resize
+from torchvision.transforms import Compose, CenterCrop, ToTensor, Resize, Normalize
 
 def is_image_file(filename):
     return any(filename.endswith(extension) for extension in [".png", ".jpg", ".jpeg"])
 
-def img2tensor(l, test, crop_size=256):
-    def _img2tensor(i, img):
-        size = int(crop_size) * 2**i 
-        if test:
-            return ToTensor()(img)
-        else:
-            return Compose([
-                CenterCrop(size),
-                ToTensor(),
-            ])(img)
+normalize = Normalize(mean=[0.5, 0.5, 0.5], std=[0.5, 0.5, 0.5])
 
-    return [_img2tensor(i, _l) for i, _l in enumerate(l)]
-
-def img_transform(img, crop_size, upscale=1):
-    return Compose([
+def img_transform(img, crop_size, upscale=1,is_normalize=False):
+    if is_normalize:
+        return Compose([
         CenterCrop(crop_size),
         Resize(crop_size // upscale),
-        ToTensor()
+        ToTensor(),
+        normalize
     ])(img)
+    else:
+        return Compose([
+            CenterCrop(crop_size),
+            Resize(crop_size // upscale),
+            ToTensor(),
+        ])(img)

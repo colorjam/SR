@@ -19,6 +19,9 @@ class Trainer():
         self.optimizer = optimizer
         self.ckp = ckp
 
+        self.best_psnr = 0.0
+        self.best_epoch = 1
+
     def train(self, epoch):
         def _train_forward(x):
             if self.args.aug:
@@ -31,6 +34,11 @@ class Trainer():
         timer_data, timer_model = utils.timer(), utils.timer()
         for iteration, (input, hr_x2, hr_x4) in enumerate(self.loader_train, 1):
             input, hr_x2, hr_x4 = self.prepare([input, hr_x2, hr_x4])
+
+            if (self.args.n_colors == 1): # only with y channel
+                input, input_cb, input_cr = utils.rgb2ycbcr(input)
+                hr_x2, hr_x2_cb, hr_x2_cr = utils.rgb2ycbcr(hr_x2)
+                hr_x4, hr_x4_cb, hr_x4_cr = utils.rgb2ycbcr(hr_x4)
 
             timer_data.hold()
             timer_model.tic()
@@ -86,7 +94,7 @@ class Trainer():
         timer_test = utils.timer()
         avg_psnr_2x = 0.0
         avg_psnr_4x = 0.0
-
+        
         for iteration, (input, hr_x2, hr_x4) in enumerate(self.loader_test, 1):
 
             has_target = isinstance(hr_x2, object)
@@ -95,9 +103,17 @@ class Trainer():
             else:
                 input = self.prepare([input])[0]
 
+            if (self.args.n_colors == 1): # only with y channel
+                input, input_cb, input_cr = utils.rgb2ycbcr(input)
+
             sr_x2, sr_x4 = self.model(input)
 
+            if (self.args.n_colors == 1):
+                sr_x2 = utils.ycbcr2rgb(sr_x2, input_cb, input_cr)
+                sr_x4 = utils.ycbcr2rgb(sr_x4, input_cb, input_cr)
+                
             save_list = [sr_x2, sr_x4, input]
+
             if has_target:
                 save_list.extend([hr_x2, hr_x4])
 
@@ -111,11 +127,17 @@ class Trainer():
                 self.ckp.write_log('=> Image{} PSNR_4x: {:.4f}'.format(iteration, psnr_4x))
                 self.ckp.save_result(iteration, save_list)
 
+
         self.ckp.write_log("=> PSNR_2x: {:.4f} PSNR_4x: {:.4f} Total time: {:.1f}s".format(
             avg_psnr_2x / len(self.loader_test), avg_psnr_4x / len(self.loader_test), timer_test.toc()))
 
         if not self.args.test:
-            self.ckp.save_model(self.model, epoch)
+            self.ckp.save_model(self.model, 'latest'.format(self.best_epoch))
+            if self.best_psnr < avg_psnr_4x:
+                self.best_psnr = avg_psnr_4x
+                self.best_epoch = epoch
+                self.ckp.save_model(self.model, '{}_best'.format(self.best_epoch))
+
 
     def prepare(self, l):
         def _prepare(tensor):

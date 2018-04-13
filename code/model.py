@@ -1,6 +1,8 @@
 import torch
 import torch.nn as nn
 import torch.nn.init as init
+from torchvision.models import squeezenet1_1
+import torch.nn.functional as F
 
 import math
 
@@ -88,7 +90,7 @@ class Net(nn.Module):
         return SR_2x, SR_4x
 
 class L1_Charbonnier_loss(nn.Module):
-    """L1 Charbonnierloss."""
+    """L1 Charbonnier Loss."""
     def __init__(self):
         super(L1_Charbonnier_loss, self).__init__()
         self.eps = 1e-3
@@ -101,6 +103,30 @@ class L1_Charbonnier_loss(nn.Module):
         loss = torch.mean(error) 
         return loss
 
+class Squeeze_loss(nn.Module):
+    """Perceptual Loss"""
+    def __init__(self):
+        super().__init__()
+        self.squeezenet = squeezenet1_1(pretrained=True).features
+        for param in self.squeezenet.parameters():
+            param.requires_grad = False
+
+    def _extract_features(self, x, cnn):
+        features = []
+        prev_feat = x
+        for i, module in enumerate(cnn._modules.values()):
+            next_feat = module(prev_feat)
+            features.append(next_feat)
+            prev_feat = next_feat
+        return features
+
+    def forward(self, sr, hr):
+        _, c, h, w = sr.shape
+        layer = 10
+        sr_features = self._extract_features(sr, self.squeezenet)
+        hr_features = self._extract_features(hr, self.squeezenet)
+        loss = F.mse_loss(sr_features[layer], hr_features[layer]) / (c * h * w)
+        return loss
     
 
   

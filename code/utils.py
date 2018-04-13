@@ -9,11 +9,11 @@ from PIL import Image, ImageOps
 import torch
 import torch.nn as nn
 import torch.optim as optim
-from torch.autograd import Variable
 import torchvision.utils as tu
+from torch.autograd import Variable
 from torchvision.transforms import ToTensor, ToPILImage, Resize, Compose
 
-from model import Net, L1_Charbonnier_loss
+from model import Net, L1_Charbonnier_loss, Squeeze_loss
 
 class timer():
     def __init__(self):
@@ -90,6 +90,8 @@ class checkpoint():
             criterion = nn.L1Loss()
         elif loss == 'Charbonnier':
             criterion = L1_Charbonnier_loss()
+        elif loss == 'Perceptual':
+            criterion = Squeeze_loss()
 
         optimizer = optim.Adam(model.parameters(), lr=self.args.lr)
 
