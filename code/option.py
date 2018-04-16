@@ -13,7 +13,7 @@ parser.add_argument('--threads', type=int, default=3,
                     help='number of threads for data loader to use')
 
 # Data specifications
-parser.add_argument('--upscale', type=int, default=2, 
+parser.add_argument('--upscale', default=2, 
                     help="super resolution upscale factor")
 parser.add_argument('--dir_datasets', type=str, default='../datasets',
                     help='dataset directory')
@@ -30,6 +30,8 @@ parser.add_argument('--aug', action='store_true',
 
 
 # Model specifications
+parser.add_argument('--multi', action='store_true', 
+                    help='train the model with multiple upscale')
 parser.add_argument('--n_resblocks', type=int, default=3, 
                     help='number of residual blocks')
 parser.add_argument('--n_feats', type=int, default=64, 
@@ -64,5 +66,8 @@ parser.add_argument('--pre_train', type=str, default='.',
                     help='load pre-trained model to test')
 parser.add_argument('--save', action='store_true', 
                     help='save the model result')
+
 args = parser.parse_args()
 print(args)
+args.upscale = list(map(lambda x: int(x), args.upscale.split('+')))
+

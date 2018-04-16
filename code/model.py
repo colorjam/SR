@@ -41,8 +41,8 @@ class Upsampler(nn.Sequential):
     def __init__(self, conv, scale, n_feat, act=False, bias=True):
 
         modules = []
-        modules.append(conv(n_feat, 4 * n_feat, 3, bias))
-        modules.append(nn.PixelShuffle(2))
+        modules.append(conv(n_feat, scale**2 * n_feat, 3, bias))
+        modules.append(nn.PixelShuffle(scale))
         if act: modules.append(act())
 
         super().__init__(*modules)
@@ -51,13 +51,15 @@ class Net(nn.Module):
     def __init__(self, args, conv=default_conv):
         super().__init__()
 
+        self.upscale = args.upscale
+        # scale = if self.upscale[0] len(self.upscale) > 1 else self.upscale[0]
+
         n_resblock = args.n_resblocks
         n_feats = args.n_feats
         kernel_size = 3 
         n_colors = 3
         act = nn.ReLU(True)
-        self.upscale = args.upscale
-        
+
         # define head module
         modules_head = [conv(n_colors, n_feats, kernel_size)]
         # define body module
@@ -68,7 +70,7 @@ class Net(nn.Module):
         modules_body.append(conv(n_feats, n_feats, kernel_size))
         # define tail module
         modules_tail = [
-            Upsampler(conv, self.upscale, n_feats, act=False),
+            Upsampler(conv, self.upscale[0], n_feats, act=False),
             conv(n_feats, n_colors, kernel_size)]
 
         self.head = nn.Sequential(*modules_head)
@@ -77,17 +79,29 @@ class Net(nn.Module):
 
     def forward(self, x):
 
-        SR_2x = self.head(x)
-        res = self.body(SR_2x)
-        res += SR_2x
-        SR_2x = self.tail(res)
+        SR = x
+        output = []
+        for _ in self.upscale:
+            SR = self.head(SR)
+            res = self.body(SR)
+            res += SR
+            SR = self.tail(res)
+            output.append(SR)
 
-        SR_4x = self.head(SR_2x)
-        res = self.body(SR_4x)
-        res += SR_4x
-        SR_4x = self.tail(res)
+        # print(len(output))
+        # SR_2x = self.head(x)
+        # res = self.body(SR_2x)
+        # res += SR_2x
+        # SR_2x = self.tail(res)
 
-        return SR_2x, SR_4x
+        # if len(self.upscale) > 0:
+        #     SR_4x = self.head(SR_2x)
+        #     res = self.body(SR_4x)
+        #     res += SR_4x
+        #     SR_4x = self.tail(res)
+        #     return [SR_2x, SR_4x]
+
+        return output
 
 class L1_Charbonnier_loss(nn.Module):
     """L1 Charbonnier Loss."""
@@ -122,7 +136,7 @@ class Squeeze_loss(nn.Module):
 
     def forward(self, sr, hr):
         _, c, h, w = sr.shape
-        layer = 10
+        layer = 8
         sr_features = self._extract_features(sr, self.squeezenet)
         hr_features = self._extract_features(hr, self.squeezenet)
         loss = F.mse_loss(sr_features[layer], hr_features[layer]) / (c * h * w)

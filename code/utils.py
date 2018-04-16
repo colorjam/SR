@@ -3,6 +3,7 @@ import datetime
 import time
 from functools import reduce
 
+import math
 import numpy as np
 from PIL import Image, ImageOps
 
@@ -106,7 +107,12 @@ class checkpoint():
     
     def save_result(self, idx, save_list):
         filename = '{}/results/{}_'.format(self.dir, idx)
-        postfix = ('SR_2x', 'SR_4x', 'LR', 'HR_2x', 'HR_4x', )
+        scale = self.args.upscale
+        if len(scale)>1:
+            postfix = ('SR_x2', 'SR_x4', 'LR', 'HR_x2', 'HR_x4')
+        else:
+            postfix = ('SR_x{}'.format(scale[0]), 'LR', 'HR_x{}'.format(scale[0]))
+
         for v, n in zip(save_list, postfix):
             tu.save_image(v.data[0], '{}{}.png'.format(filename, n))
 
@@ -115,10 +121,13 @@ class checkpoint():
         self.log_file.close()
 
 def rgb2ycbcr(rgb): # Tensor of [N, C, H, W]
-    rgb = ToPILImage()(rgb.squeeze())
-    y, cb, cr = rgb.convert('YCbCr').split()
-    y = Variable(ToTensor()(y).unsqueeze(0))
-    return y, cb, cr
+    def _rgb2cbcr(rgb):
+        rgb = ToPILImage()(rgb.squeeze())
+        y, cb, cr = rgb.convert('YCbCr').split()
+        y = Variable(ToTensor()(y).unsqueeze(0))
+        return y, cb, cr
+    
+    return [_rgb2cbcr(img) for img in rgb]
 
 def ycbcr2rgb(y, cb, cr):
     y = y.squeeze().numpy()
@@ -128,22 +137,44 @@ def ycbcr2rgb(y, cb, cr):
     rgb = Image.merge('YCbCr', [y, cb, cr]).convert('RGB')
     return Variable(ToTensor()(rgb).unsqueeze(0).contiguous())
 
-def calc_PSNR(input, target, scale):
-    # evaluate these datasets in y channel only
-    c, h, w = input.size()
-    diff = input - target
+# def calc_PSNR(input, target, scale):
+#     # evaluate these datasets in y channel only
+#     c, h, w = input.size()
+#     diff = input - target
+#     shave = scale
+#     if c > 1:
+#         input_Y = rgb2ycbcr(input.cpu())[0]
+#         target_Y = rgb2ycbcr(target.cpu())[0]
+#         diff = (input_Y.data - target_Y.data).view(1, h, w)
+
+#     diff = diff[:, shave:(h - shave), shave:(w - shave)]
+#     mse = diff.pow(2).mean()
+#     psnr = -10 * np.log10(mse)
+
+#     return psnr
+
+def calc_psnr(sr, hr, scale, benchmark=False):
+    '''
+        Here we assume quantized(0-255) arguments.
+        For Set5, Set14, B100, Urban100 dataset,
+        we measure PSNR on luminance channel only
+    '''
+    diff = (sr - hr).data.div(255)
+    # if benchmark:
     shave = scale
-    if c > 1:
-        input_Y = rgb2ycbcr(input.cpu())[0]
-        target_Y = rgb2ycbcr(target.cpu())[0]
-        diff = (input_Y.data - target_Y.data).view(1, h, w)
+    if diff.size(1) > 1:
+        convert = diff.new(1, 3, 1, 1)
+        convert[0, 0, 0, 0] = 65.738
+        convert[0, 1, 0, 0] = 129.057
+        convert[0, 2, 0, 0] = 25.064
+        diff.mul_(convert).div_(256)
+        diff = diff.sum(dim=1, keepdim=True)
 
-    diff = diff[:, shave:(h - shave), shave:(w - shave)]
-    mse = diff.pow(2).mean()
-    psnr = -10 * np.log10(mse)
+    valid = diff[:, :, shave:-shave, shave:-shave]
+    mse = valid.pow(2).mean()
 
-    return psnr
-
+    return -10 * math.log10(mse)
+    
 def train_transform(input, model):
 
     def _totensor(x):

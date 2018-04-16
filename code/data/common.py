@@ -5,28 +5,27 @@ from torchvision.transforms import Compose, CenterCrop, ToTensor, Resize, Normal
 def is_image_file(filename):
     return any(filename.endswith(extension) for extension in [".png", ".jpg", ".jpeg"])
 
-normalize = Normalize(mean=[0.5, 0.5, 0.5], std=[0.5, 0.5, 0.5])
-
-def img_transform(img, crop_size, upscale=1,is_normalize=False):
-    if is_normalize:
-        return Compose([
+def img_transform(img, crop_size, upscale=1):
+    return Compose([
         CenterCrop(crop_size),
         Resize(crop_size // upscale),
         ToTensor(),
-        normalize
     ])(img)
-    else:
-        return Compose([
-            CenterCrop(crop_size),
-            Resize(crop_size // upscale),
-            ToTensor(),
-        ])(img)
+
+def train_transform(img, crop_size, upscale=1):
+    return Compose([
+        CenterCrop(crop_size * upscale),
+        ToTensor(),
+    ])(img)
+
+def test_transform(img, crop_size, upscale=1):
+    return ToTensor()(img)
 
 def set_channel(l, n_channel):
     def _set_channel(img):
-        if img.ndim == 2:
+        if np.array(img).ndim == 2:
             img = np.expand_dims(img, axis=2)
-
+        print(img.size)
         c = img.shape[2]
         if n_channel == 1 and c == 3:
             img = np.expand_dims(sc.rgb2ycbcr(img)[:, :, 0], 2)
@@ -36,3 +35,5 @@ def set_channel(l, n_channel):
         return img
 
     return [_set_channel(_l) for _l in l]
+
+
