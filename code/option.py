@@ -58,6 +58,8 @@ parser.add_argument('--log_file', type=str, default='logs',
                     help='log file name')
 parser.add_argument('--print_freq', type=int, default=3,
                     help='frequency of showing training results on console')
+parser.add_argument('--test_freq', type=int, default=5,
+                    help='frequency of testing testset on console')
 
 # Testing specifications
 parser.add_argument('--test', action='store_true', 

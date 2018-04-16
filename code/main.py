@@ -38,7 +38,7 @@ if not args.test:
     for epoch in range(start, end):
         since = time.time()
         t.train(epoch)
-        if epoch % args.test_every == 0:
+        if epoch % args.test_freq == 0:
             t.test(epoch)   
         time_elapsed = time.time() - since 
         ckp.write_log('==> Training complete in {:.0f}m {:.0f}s'.format(
