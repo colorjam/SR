@@ -15,7 +15,7 @@ class DIV2K(Dataset):
         self.dir_hr = join(args.dir_datasets + '/DIV2K/HR')
         self.dir_lr = [join(args.dir_datasets + '/DIV2K/LR/X' + str(scale)) for scale in args.upscale]
         
-        self.n_train = 100
+        self.n_train = args.n_train
         self.n_test = 20
 
         if train:
@@ -52,11 +52,9 @@ class DIV2K(Dataset):
             return self.n_test
 
     def _get_lr(self):
-        lr = []
+        list_lr = [[] for _ in self.args.upscale]
         for i, scale in enumerate(self.args.upscale):
-            list_lr = []
             for filename in self.images_hr:
                 filename = filename.split('/')[-1].split('.')[0]
-                list_lr.append(join(self.dir_lr[i], '{}x{}.png'.format(filename, str(scale))))
-            lr.append(list_lr)
-        return lr
+                list_lr[i].append(join(self.dir_lr[i], '{}x{}.png'.format(filename, str(scale))))
+        return list_lr

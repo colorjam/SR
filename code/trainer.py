@@ -25,7 +25,7 @@ class Trainer():
     def train(self, epoch):
         def _train_forward(x):
             if self.args.aug:
-                return utils.train_transform(x, self.model)
+                return utils.augmentation(x, self.model, self.args.upscale)
             else:
                 return self.model(x)
 
@@ -34,10 +34,6 @@ class Trainer():
         timer_data, timer_model = utils.timer(), utils.timer()
         for iteration, (input, hr) in enumerate(self.loader_train, 1):
             input, hr = self.prepare([input, hr])
-
-            if (self.args.n_colors == 1): # only with y channel
-                input, input_cb, input_cr = utils.rgb2ycbcr([input])
-                hr, hr_cb, hr_cr = utils.rgb2ycbcr(hr)
 
             timer_data.hold()
             timer_model.tic()
@@ -108,7 +104,8 @@ class Trainer():
                 input = self.prepare([input])[0]
            
             sr = self.model(input)
-                
+            # sr = list(map(utils.quantize, sr))
+
             save_list = [*sr, input]
 
             if has_target:

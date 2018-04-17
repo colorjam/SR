@@ -30,8 +30,10 @@ parser.add_argument('--aug', action='store_true',
 
 
 # Model specifications
-parser.add_argument('--multi', action='store_true', 
-                    help='train the model with multiple upscale')
+
+parser.add_argument('--model', type=str, default='EDSR',
+                    choices=('EDSR', 'DDBPN'),
+                    help='model to use (ESSR | DDBPN)')              
 parser.add_argument('--n_resblocks', type=int, default=3, 
                     help='number of residual blocks')
 parser.add_argument('--n_feats', type=int, default=64, 
@@ -42,14 +44,15 @@ parser.add_argument('--epochs', type=int, default=10,
                     help='number of epochs to train for')
 parser.add_argument('--lr', type=float, default=2e-4, 
                     help='learning rate. Default=2e-4')
-parser.add_argument('--optimizer', default='ADAM',
-                    choices=('SGD', 'ADAM', 'RMSprop'),
-                    help='optimizer to use (SGD | ADAM | RMSprop)')
-parser.add_argument('--loss', default='Charbonnier', 
-                    choices=('MSE', 'L1', 'Charbonnier', 'Perceptual'), 
-                    help='loss function to use (MSE | L1 | Charbonnier | Perceptual)')
+parser.add_argument('--init_weight', action='store_true', 
+                    help='initalize weights?')
+parser.add_argument('--loss', default='L1', 
+                    choices=('MSE', 'L1', 'Robust', 'Perceptual'), 
+                    help='loss function to use (MSE | L1 | Robust | Perceptual)')
 
 # Training specifications
+parser.add_argument('--n_train', type=int, default=800,
+                    help='number of training data of DIV2K dataset')
 parser.add_argument('--reset', action='store_true', 
                     help='reset the training')
 parser.add_argument('--resume', type=int, default=-1, 

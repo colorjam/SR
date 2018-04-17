@@ -35,14 +35,17 @@ t = Trainer(args, loader, model, criterion, optimizer, ckp)
 if not args.test:
     start = 1 if args.resume == -1 else args.resume + 1
     end = args.epochs + start
+
     for epoch in range(start, end):
         since = time.time()
         t.train(epoch)
         if epoch % args.test_freq == 0:
-            t.test(epoch)   
-        time_elapsed = time.time() - since 
-        ckp.write_log('==> Training complete in {:.0f}m {:.0f}s'.format(
-        time_elapsed // 60, time_elapsed % 60))  
+            t.test(epoch)  
+
+    time_elapsed = time.time() - since 
+    ckp.write_log('==> Training complete in {:.0f}m {:.0f}s'.format(
+    time_elapsed // 60, time_elapsed % 60))  
+    
 else:
     t.test()
 

@@ -5,7 +5,8 @@ from functools import reduce
 
 import math
 import numpy as np
-from PIL import Image, ImageOps
+from PIL import Image
+import skimage.color as sc
 
 import torch
 import torch.nn as nn
@@ -14,7 +15,7 @@ import torchvision.utils as tu
 from torch.autograd import Variable
 from torchvision.transforms import ToTensor, ToPILImage, Resize, Compose
 
-from model import Net, L1_Charbonnier_loss, Squeeze_loss
+from model import Model
 
 class timer():
     def __init__(self):
@@ -68,7 +69,7 @@ class checkpoint():
 
     def get_model(self):
         """Create model and define loss function (criterion) and optimizer"""
-        model = Net(self.args)
+        model = Model(self.args).model
         pre_train = self.args.pre_train
 
         if pre_train != '.':
@@ -83,16 +84,7 @@ class checkpoint():
                 torch.load('{}/model/model_{}.pt'.format(self.dir, resume)))
             print('=> Continue from epoch {}...'.format(resume))
         
-        # criterion = nn.L1Loss()
-        loss = self.args.loss
-        if loss == 'MSE':
-            criterion = nn.MSELoss()
-        elif loss == 'L1':
-            criterion = nn.L1Loss()
-        elif loss == 'Charbonnier':
-            criterion = L1_Charbonnier_loss()
-        elif loss == 'Perceptual':
-            criterion = Squeeze_loss()
+        criterion = Model(self.args).criterion
 
         optimizer = optim.Adam(model.parameters(), lr=self.args.lr)
 
@@ -120,38 +112,8 @@ class checkpoint():
         self.log_file.write('\n')
         self.log_file.close()
 
-def rgb2ycbcr(rgb): # Tensor of [N, C, H, W]
-    def _rgb2cbcr(rgb):
-        rgb = ToPILImage()(rgb.squeeze())
-        y, cb, cr = rgb.convert('YCbCr').split()
-        y = Variable(ToTensor()(y).unsqueeze(0))
-        return y, cb, cr
-    
-    return [_rgb2cbcr(img) for img in rgb]
-
-def ycbcr2rgb(y, cb, cr):
-    y = y.squeeze().numpy()
-    cb, cr = Resize(y.shape)(cb), Resize(y.shape)(cr)
-    y = (y * 255.0).clip(0, 255)
-    y = Image.fromarray(np.uint8(y), mode='L')
-    rgb = Image.merge('YCbCr', [y, cb, cr]).convert('RGB')
-    return Variable(ToTensor()(rgb).unsqueeze(0).contiguous())
-
-# def calc_PSNR(input, target, scale):
-#     # evaluate these datasets in y channel only
-#     c, h, w = input.size()
-#     diff = input - target
-#     shave = scale
-#     if c > 1:
-#         input_Y = rgb2ycbcr(input.cpu())[0]
-#         target_Y = rgb2ycbcr(target.cpu())[0]
-#         diff = (input_Y.data - target_Y.data).view(1, h, w)
-
-#     diff = diff[:, shave:(h - shave), shave:(w - shave)]
-#     mse = diff.pow(2).mean()
-#     psnr = -10 * np.log10(mse)
-
-#     return psnr
+def quantize(img):
+    return img.clamp(0, 255).round()
 
 def calc_psnr(sr, hr, scale, benchmark=False):
     '''
@@ -159,23 +121,21 @@ def calc_psnr(sr, hr, scale, benchmark=False):
         For Set5, Set14, B100, Urban100 dataset,
         we measure PSNR on luminance channel only
     '''
-    diff = (sr - hr).data.div(255)
-    # if benchmark:
+    diff = (sr - hr).data
     shave = scale
-    if diff.size(1) > 1:
-        convert = diff.new(1, 3, 1, 1)
-        convert[0, 0, 0, 0] = 65.738
-        convert[0, 1, 0, 0] = 129.057
-        convert[0, 2, 0, 0] = 25.064
-        diff.mul_(convert).div_(256)
-        diff = diff.sum(dim=1, keepdim=True)
+    convert = diff.new(1, 3, 1, 1)
+    convert[0, 0, 0, 0] = 65.738
+    convert[0, 1, 0, 0] = 129.057
+    convert[0, 2, 0, 0] = 25.064
+    diff.mul_(convert).div_(256)
+    diff = diff.sum(dim=1, keepdim=True)
 
     valid = diff[:, :, shave:-shave, shave:-shave]
     mse = valid.pow(2).mean()
 
     return -10 * math.log10(mse)
     
-def train_transform(input, model):
+def augmentation(input, model, upscale):
 
     def _totensor(x):
         return Variable(torch.Tensor(x.copy()))
@@ -197,22 +157,26 @@ def train_transform(input, model):
     for i in range(3):
         inputlist.extend([_rotate(inputlist[-1], axes=(2, 3))])
 
-    outputlist = [model(aug) for aug in inputlist]
-    outputlist_2x, outputlist_4x = [list(a) for a in zip(*outputlist)]
+    outputlist = [[] for _ in upscale]
+    for input in inputlist:
+        output = model(input)
+        for i, o in enumerate(output):
+            outputlist[i].append(o)
 
-    for i in range(len(outputlist_2x)):
+    for i in range(len(outputlist[0])):
         k = i % 4
         if k > 0:
-            outputlist_2x[i] = _rotate(outputlist_2x[i], k=k, axes=(3, 2))
-            outputlist_4x[i] = _rotate(outputlist_4x[i], k=k, axes=(3, 2))
+            for j in range(len(upscale)):
+                outputlist[j][i] = _rotate(outputlist[j][i], k=k, axes=(3, 2))
         if i > 3:
-            outputlist_2x[i] = _flip(outputlist_2x[i])
-            outputlist_4x[i] = _flip(outputlist_4x[i])
+            for j in range(len(upscale)):
+                outputlist[j][i] = _flip(outputlist[j][i])
 
-    output_2x = reduce((lambda x, y: x + y), outputlist_2x) / len(outputlist_2x)
-    output_4x = reduce((lambda x, y: x + y), outputlist_4x) / len(outputlist_4x)
+    output = [[] for _ in upscale]
+    for j in range(len(upscale)):
+        output[j] = reduce((lambda x, y: x + y), outputlist[j]) / len(outputlist[j])
 
-    return output_2x, output_4x
+    return output
 
             
 
