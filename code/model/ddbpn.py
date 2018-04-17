@@ -3,6 +3,7 @@
 
 import torch
 import torch.nn as nn
+import math
 
 def projection_conv(in_channels, out_channels, scale, up=True):
     kernel_size, stride, padding = {
@@ -105,6 +106,11 @@ class DDBPN(nn.Module):
         self.reconstruction = nn.Sequential(*reconstruction)
 
         # self.add_mean = common.MeanShift(args.rgb_range, rgb_mean, rgb_std, 1)
+        if args.init_weight:
+            for m in self.modules():
+                if isinstance(m, nn.Conv2d):
+                    n = m.kernel_size[0] * m.kernel_size[1] * m.out_channels
+                    m.weight.data.normal_(0, math.sqrt(2. / n))
 
     def forward(self, x):
         # x = self.sub_mean(x)
