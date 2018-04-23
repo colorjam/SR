@@ -1,7 +1,7 @@
 import random
 from os import scandir
 from os.path import join
-from PIL import Image
+from PIL import Image, ImageEnhance, ImageOps, ImageFile
 import numpy as np
 
 from data.common import is_image_file, set_channel, train_transform, test_transform
@@ -48,6 +48,9 @@ class DIV2K(Dataset):
         if self.args.aug:
             input, target = self.augment([input, target])
 
+        if self.args.random:
+            input = self.random_color(input)
+
         # transform
         input = _transform(input, self.args.crop_size)
         if len(upscale) > 1:
@@ -87,3 +90,18 @@ class DIV2K(Dataset):
             return img
 
         return [_augment(_l) for _l in l]
+
+    def random_color(self, img):
+        """
+        对图像进行颜色抖动
+        :param image: PIL的图像image
+        :return: 有颜色色差的图像image
+        """
+        random_factor = np.random.randint(0, 31) / 10.  
+        color_image = ImageEnhance.Color(img).enhance(random_factor)  # adjust saturation
+        random_factor = np.random.randint(10, 21) / 10.  
+        brightness_image = ImageEnhance.Brightness(color_image).enhance(random_factor)  # adjust brightness
+        random_factor = np.random.randint(10, 21) / 10.  
+        contrast_image = ImageEnhance.Contrast(brightness_image).enhance(random_factor)  # adjust contrast
+        random_factor = np.random.randint(0, 31) / 10.  
+        return ImageEnhance.Sharpness(contrast_image).enhance(random_factor)  # adjust sharpness

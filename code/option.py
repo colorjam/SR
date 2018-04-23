@@ -27,6 +27,8 @@ parser.add_argument('--n_colors', type=int, default=3,
                     help='number of color channels to use')
 parser.add_argument('--aug', action='store_true',
                     help='augmention of training data')
+parser.add_argument('--random', action='store_true',
+                    help='random color of training data')
 
 
 # Model specifications
