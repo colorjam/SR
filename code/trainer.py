@@ -40,7 +40,7 @@ class Trainer():
 
             self.optimizer.zero_grad()
 
-            sr = _train_forward(input)
+            sr = self.model(input)
 
             loss = 0.0
             for i in range(len(hr)):
@@ -62,25 +62,6 @@ class Trainer():
                     timer_model.release(), timer_data.release()))
 
             timer_data.tic()
-
-            #============ TensorBoard logging ============#
-
-            # iter = iteration + (epoch - 1) * len(self.loader_train)
-
-            # # Log the scalar values
-            # info = {
-            #     'loss': loss.data[0]
-            # }
-
-            # for tag, value in info.items():
-            #     logger.scalar_summary(tag, value, iter)
-
-            # # Log values and gradients of the parameters (histogram)
-            # for tag, value in self.model.named_parameters():
-            #     tag = tag.replace('.', '/')
-            #     logger.histo_summary(tag, to_np(value), iter)
-            #     logger.histo_summary(tag + '/grad', to_np(value.grad), iter)
-
         
         self.ckp.write_log('=> Epoch {} Complete: Avg. loss: {:.4f}'.format(
             epoch, epoch_loss / len(self.loader_train)))
@@ -90,9 +71,11 @@ class Trainer():
         timer_test = utils.timer()
         upscale = self.args.upscale
         avg_psnr = {}
+        avg_ssim = {}
 
         for scale in upscale:
             avg_psnr[scale] = 0.0
+            avg_ssim[scale] = 0.0
         
         for iteration, (input, hr) in enumerate(self.loader_test, 1):
 
@@ -104,7 +87,6 @@ class Trainer():
                 input = self.prepare([input])[0]
            
             sr = self.model(input)
-            # sr = list(map(utils.quantize, sr))
 
             save_list = [*sr, input]
 
@@ -112,19 +94,24 @@ class Trainer():
                 save_list.extend(hr)
 
                 psnr = {}
+                ssim = {}
                 for i, scale in enumerate(upscale):
-                    psnr[scale] = utils.calc_psnr(hr[i], sr[i], int(scale), True)
+                    psnr[scale] = utils.calc_psnr(hr[i], sr[i], int(scale))
+                    ssim[scale] = utils.calc_ssim(hr[i], sr[i]) 
                     avg_psnr[scale] += psnr[scale]
+                    avg_ssim[scale] += ssim[scale]
 
             if self.args.save:
                 if has_target:
                     for i, scale in enumerate(upscale):
                         self.ckp.write_log('=> Image{} PSNR_x{}: {:.4f}'.format(iteration, scale, psnr[scale]))
+                        self.ckp.write_log('=> Image{} SSIM_x{}: {:.4f}'.format(iteration, scale, ssim[scale]))
                 self.ckp.save_result(iteration, save_list)
 
         if has_target:
             for scale, value in avg_psnr.items():
                 self.ckp.write_log("=> PSNR_x{}: {:.4f}".format(scale, value/len(self.loader_test)))
+                self.ckp.write_log("=> SSIM_x{}: {:.4f}".format(scale, avg_ssim[scale]/len(self.loader_test)))
                 
         self.ckp.write_log("=> Total time: {:.1f}s".format(timer_test.toc()))
 
@@ -135,7 +122,6 @@ class Trainer():
                 self.best_psnr = cur_psnr
                 self.best_epoch = epoch
                 self.ckp.save_model(self.model, '{}_best'.format(self.best_epoch))
-
 
     def prepare(self, l):
         def _prepare(tensor):       

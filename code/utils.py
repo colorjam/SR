@@ -7,6 +7,7 @@ import math
 import numpy as np
 from PIL import Image
 import skimage.color as sc
+from skimage.measure import compare_ssim as ssim
 
 import torch
 import torch.nn as nn
@@ -56,7 +57,7 @@ class checkpoint():
 
         _make_dir(self.dir)
         _make_dir(self.dir + '/model')
-        _make_dir(self.dir + '/results')
+        _make_dir(self.dir + '/results_{}'.format(self.args.loss))
 
         open_type = 'a' if os.path.exists(self.dir + '/log.txt') else 'w'
         self.log_file = open(self.dir + '/log.txt', open_type)
@@ -98,7 +99,7 @@ class checkpoint():
         torch.save(model.state_dict(), '{}/model/model_{}.pt'.format(self.dir, epoch))
     
     def save_result(self, idx, save_list):
-        filename = '{}/results/{}_'.format(self.dir, idx)
+        filename = '{}/results_{}/{}_'.format(self.dir, self.args.loss, idx)
         scale = self.args.upscale
         if len(scale)>1:
             postfix = ('SR_x2', 'SR_x4', 'LR', 'HR_x2', 'HR_x4')
@@ -117,11 +118,10 @@ def quantize(img):
 
 def calc_psnr(sr, hr, scale, benchmark=False):
     '''
-        Here we assume quantized(0-255) arguments.
-        For Set5, Set14, B100, Urban100 dataset,
         we measure PSNR on luminance channel only
     '''
     diff = (sr - hr).data
+    # print(diff[:, 0:, :, :])
     shave = scale
     convert = diff.new(1, 3, 1, 1)
     convert[0, 0, 0, 0] = 65.738
@@ -132,8 +132,12 @@ def calc_psnr(sr, hr, scale, benchmark=False):
 
     valid = diff[:, :, shave:-shave, shave:-shave]
     mse = valid.pow(2).mean()
-
     return -10 * math.log10(mse)
+
+def calc_ssim(sr, hr, benchmark=False):
+    sr = sr.data[0].squeeze().numpy().transpose(1, 2, 0)
+    hr = hr.data[0].squeeze().numpy().transpose(1, 2, 0)
+    return ssim(sr, hr, multichannel=True)
     
 def augmentation(input, model, upscale):
 

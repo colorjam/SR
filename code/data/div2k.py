@@ -1,6 +1,8 @@
+import random
 from os import scandir
 from os.path import join
 from PIL import Image
+import numpy as np
 
 from data.common import is_image_file, set_channel, train_transform, test_transform
 
@@ -34,14 +36,23 @@ class DIV2K(Dataset):
             _transform = test_transform
         
         # input: x2 | x4
-        input = _transform(Image.open(self.images_lr[-1][idx]), self.args.crop_size)
+        input = Image.open(self.images_lr[-1][idx])
 
         # target: x2 | x4 | x2 + x4
         target = []
         if len(upscale) > 1: # multiple scale
-            target.append(_transform(Image.open(self.images_lr[0][idx]), self.args.crop_size, upscale[0]))
-        hr = _transform(Image.open(self.images_hr[idx]), self.args.crop_size, upscale[-1])
+            target.append(Image.open(self.images_lr[0][idx]))
+        hr = Image.open(self.images_hr[idx])
         target.append(hr)
+
+        if self.args.aug:
+            input, target = self.augment([input, target])
+
+        # transform
+        input = _transform(input, self.args.crop_size)
+        if len(upscale) > 1:
+            target[0] = _transform(target[0], self.args.crop_size, upscale[0])
+        target[-1] = _transform(target[-1], self.args.crop_size, upscale[-1])
 
         return input, target
 
@@ -58,3 +69,21 @@ class DIV2K(Dataset):
                 filename = filename.split('/')[-1].split('.')[0]
                 list_lr[i].append(join(self.dir_lr[i], '{}x{}.png'.format(filename, str(scale))))
         return list_lr
+
+    def augment(self, l, hflip=True, rot=True):
+        hflip = hflip and random.random() < 0.5
+        vflip = rot and random.random() < 0.5
+        rot90 = rot and random.random() < 0.5
+
+        def _augment(img):
+            if type(img) == list:
+                return [_augment(i) for i in img]
+                
+            # print("img.shape", img.shape)
+            if hflip: img = img.transpose(Image.FLIP_TOP_BOTTOM)
+            if vflip: img = img.transpose(Image.FLIP_TOP_BOTTOM)
+            if rot90: img = img.transpose(Image.ROTATE_90)
+            
+            return img
+
+        return [_augment(_l) for _l in l]

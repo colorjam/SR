@@ -130,5 +130,5 @@ class DDBPN(nn.Module):
         out = self.reconstruction(torch.cat(h_list, dim=1))
         # out = self.add_mean(out)
 
-        return out
+        return [out]
 

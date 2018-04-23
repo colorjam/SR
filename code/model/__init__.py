@@ -16,7 +16,6 @@ class Model:
         elif loss == 'L1':
             self.criterion = nn.L1Loss()
         elif loss == 'Robust':
-
             self.criterion = module_loss.Robust_loss()
         elif loss == 'Perceptual':
-            self.criterion = getattr(module_loss, Squeeze_loss)()
+            self.criterion = module_loss.Squeeze_loss()
