@@ -45,11 +45,12 @@ class DIV2K(Dataset):
         hr = Image.open(self.images_hr[idx])
         target.append(hr)
 
+        # data augmentation
         if self.args.aug:
             input, target = self.augment([input, target])
 
         if self.args.random:
-            input = self.random_color(input)
+            input, target = self.random_color([input, target])
 
         # transform
         input = _transform(input, self.args.crop_size)
@@ -91,17 +92,29 @@ class DIV2K(Dataset):
 
         return [_augment(_l) for _l in l]
 
-    def random_color(self, img):
-        """
-        对图像进行颜色抖动
-        :param image: PIL的图像image
-        :return: 有颜色色差的图像image
-        """
-        random_factor = np.random.randint(0, 31) / 10.  
-        color_image = ImageEnhance.Color(img).enhance(random_factor)  # adjust saturation
-        random_factor = np.random.randint(10, 21) / 10.  
-        brightness_image = ImageEnhance.Brightness(color_image).enhance(random_factor)  # adjust brightness
-        random_factor = np.random.randint(10, 21) / 10.  
-        contrast_image = ImageEnhance.Contrast(brightness_image).enhance(random_factor)  # adjust contrast
-        random_factor = np.random.randint(0, 31) / 10.  
-        return ImageEnhance.Sharpness(contrast_image).enhance(random_factor)  # adjust sharpness
+    def random_color(self, l, saturation=True, brightness=True, contrast=True, sharpness=True):
+        saturation = saturation and random.random() < 0.5
+        brightness = brightness and random.random() < 0.5
+        contrast = contrast and random.random() < 0.5
+        sharpness = sharpness and random.random() < 0.5
+        
+        def _random(img):
+            if type(img) == list:
+                return [_random(i) for i in img]
+
+            if saturation:   
+                random_factor = random.uniform(1, 3)  
+                img = ImageEnhance.Color(img).enhance(random_factor)  
+            if brightness:
+                random_factor = random.uniform(1, 2) 
+                img = ImageEnhance.Brightness(img).enhance(random_factor) 
+            if contrast: 
+                random_factor = random.uniform(1, 2) 
+                img = ImageEnhance.Contrast(img).enhance(random_factor) 
+            if sharpness:
+                random_factor = random.uniform(1, 3)  
+                img = ImageEnhance.Sharpness(img).enhance(random_factor) 
+
+            return img
+
+        return [_random(_l) for _l in l] 
