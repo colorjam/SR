@@ -12,11 +12,8 @@ def img_transform(img, crop_size, upscale=1):
         ToTensor(),
     ])(img)
 
-def train_transform(img, crop_size, upscale=1):
-    return Compose([
-        CenterCrop(crop_size * upscale),
-        ToTensor(),
-    ])(img)
+def train_transform(img):
+    return ToTensor()(img)
 
 def test_transform(img, crop_size, upscale=1):
     return ToTensor()(img)

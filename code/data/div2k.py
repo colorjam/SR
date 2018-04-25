@@ -28,6 +28,7 @@ class DIV2K(Dataset):
         self.images_lr = self._get_lr()
 
     def __getitem__(self, idx):
+        idx = idx % self.n_train
         upscale = self.args.upscale
 
         if self.train:
@@ -45,6 +46,7 @@ class DIV2K(Dataset):
         hr = Image.open(self.images_hr[idx])
         target.append(hr)
 
+        input, target = self._get_crop(input, target)
         # data augmentation
         if self.args.aug:
             input, target = self.augment([input, target])
@@ -62,7 +64,7 @@ class DIV2K(Dataset):
 
     def __len__(self):
         if self.train:
-            return self.n_train
+            return self.n_train * 2
         else:
             return self.n_test
 
@@ -74,6 +76,24 @@ class DIV2K(Dataset):
                 list_lr[i].append(join(self.dir_lr[i], '{}x{}.png'.format(filename, str(scale))))
         return list_lr
 
+    def _get_crop(self, input, target):
+        upscale = self.args.upscale
+        crop_size = self.args.crop_size
+
+        def _crop(img, crop_size):
+            iw, ih = img.size
+            left, right = (iw - crop_size) / 2, (iw + crop_size) / 2
+            top, bottom = (ih - crop_size) / 2, (ih + crop_size) / 2
+            return img.crop((left, top, right, bottom))
+
+        input = _crop(input, crop_size)
+        if len(upscale) > 1:
+            target[0] = _crop(target[0], crop_size * upscale[0])
+        target[-1] = _crop(target[-1], crop_size * upscale[-1])
+
+        return input, target
+
+
     def augment(self, l, hflip=True, rot=True):
         hflip = hflip and random.random() < 0.5
         vflip = rot and random.random() < 0.5
@@ -83,7 +103,6 @@ class DIV2K(Dataset):
             if type(img) == list:
                 return [_augment(i) for i in img]
                 
-            # print("img.shape", img.shape)
             if hflip: img = img.transpose(Image.FLIP_TOP_BOTTOM)
             if vflip: img = img.transpose(Image.FLIP_TOP_BOTTOM)
             if rot90: img = img.transpose(Image.ROTATE_90)
