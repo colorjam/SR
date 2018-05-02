@@ -3,8 +3,9 @@ from os import scandir
 from os.path import join
 from PIL import Image, ImageEnhance, ImageOps, ImageFile
 import numpy as np
+import cv2
 
-from data.common import is_image_file, set_channel, train_transform, test_transform
+from data.common import is_image_file
 
 from torch.utils.data import Dataset
 from torchvision.transforms import ToTensor, Compose, CenterCrop, Normalize
@@ -31,10 +32,8 @@ class DIV2K(Dataset):
         idx = idx % self.n_train
         upscale = self.args.upscale
 
-        if self.train:
-            _transform = train_transform
-        else:
-            _transform = test_transform
+        def _transform(img):
+            return ToTensor()(img)
         
         # input: x2 | x4
         input = Image.open(self.images_lr[-1][idx])
@@ -46,25 +45,28 @@ class DIV2K(Dataset):
         hr = Image.open(self.images_hr[idx])
         target.append(hr)
 
+        # crop images
         input, target = self._get_crop(input, target)
+        
         # data augmentation
         if self.args.aug:
             input, target = self.augment([input, target])
 
         if self.args.random:
-            input, target = self.random_color([input, target])
+            random_factor = random.random()
+            input, target = self.environment_factor([input, target], random_factor)
 
         # transform
-        input = _transform(input, self.args.crop_size)
+        input = _transform(input)
         if len(upscale) > 1:
-            target[0] = _transform(target[0], self.args.crop_size, upscale[0])
-        target[-1] = _transform(target[-1], self.args.crop_size, upscale[-1])
+            target[0] = _transform(target[0])
+        target[-1] = _transform(target[-1])
 
         return input, target
 
     def __len__(self):
         if self.train:
-            return self.n_train * 2
+            return self.n_train
         else:
             return self.n_test
 
@@ -111,7 +113,7 @@ class DIV2K(Dataset):
 
         return [_augment(_l) for _l in l]
 
-    def random_color(self, l, saturation=True, brightness=True, contrast=True, sharpness=True):
+    def random_color(self, l, random_factor, saturation=True, brightness=True, contrast=True, sharpness=True):
         saturation = saturation and random.random() < 0.5
         brightness = brightness and random.random() < 0.5
         contrast = contrast and random.random() < 0.5
@@ -122,18 +124,29 @@ class DIV2K(Dataset):
                 return [_random(i) for i in img]
 
             if saturation:   
-                random_factor = random.uniform(1, 3)  
                 img = ImageEnhance.Color(img).enhance(random_factor)  
             if brightness:
-                random_factor = random.uniform(1, 2) 
                 img = ImageEnhance.Brightness(img).enhance(random_factor) 
             if contrast: 
-                random_factor = random.uniform(1, 2) 
                 img = ImageEnhance.Contrast(img).enhance(random_factor) 
             if sharpness:
-                random_factor = random.uniform(1, 3)  
                 img = ImageEnhance.Sharpness(img).enhance(random_factor) 
 
             return img
 
         return [_random(_l) for _l in l] 
+
+    def environment_factor(self, l, random_factor):
+        def _factor(img):
+            if type(img) == list:
+                return [_factor(i) for i in img]
+
+            im = np.asarray(img)
+            hsv = cv2.cvtColor(im, cv2.COLOR_BGR2HSV)
+            hsv[:,:,0] = hsv[:,:,0] * (0.8 + random_factor * 0.2)
+            hsv[:,:,1] = hsv[:,:,1] * (0.3 + random_factor * 0.7)
+            hsv[:,:,2] = hsv[:,:,2] * (0.2 + random_factor * 0.8)
+            im = cv2.cvtColor(hsv, cv2.COLOR_HSV2BGR)
+            return Image.fromarray(np.uint8(im))
+
+        return [_factor(_l) for _l in l] 

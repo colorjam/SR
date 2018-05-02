@@ -109,8 +109,9 @@ class DDBPN(nn.Module):
         if args.init_weight:
             for m in self.modules():
                 if isinstance(m, nn.Conv2d):
-                    n = m.kernel_size[0] * m.kernel_size[1] * m.out_channels
-                    m.weight.data.normal_(0, math.sqrt(2. / n))
+                    torch.nn.init.kaiming_normal(m.weight)
+                elif isinstance(m, nn.ConvTranspose2d):
+        	        torch.nn.init.kaiming_normal(m.weight)
 
     def forward(self, x):
         # x = self.sub_mean(x)

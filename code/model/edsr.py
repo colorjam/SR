@@ -60,7 +60,7 @@ class EDSR(nn.Module):
             ResBlock(
                 conv, n_feats, kernel_size, act=act, res_scale=1) \
             for _ in range(n_resblock)]
-        modules_body.append(conv(n_feats, n_feats, kernel_size))
+        #modules_body.append(conv(n_feats, n_feats, kernel_size))
         # define tail module
         modules_tail = [
             Upsampler(conv, self.upscale[0], n_feats, act=False),
@@ -73,8 +73,9 @@ class EDSR(nn.Module):
         if args.init_weight:
             for m in self.modules():
                 if isinstance(m, nn.Conv2d):
-                    n = m.kernel_size[0] * m.kernel_size[1] * m.out_channels
-                    m.weight.data.normal_(0, math.sqrt(2. / n))
+                    torch.nn.init.kaiming_normal(m.weight)
+                    # n = m.kernel_size[0] * m.kernel_size[1] * m.out_channels
+                    # m.weight.data.normal_(0, math.sqrt(2. / n))
 
     def forward(self, x):
         SR = x

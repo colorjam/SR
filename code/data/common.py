@@ -15,9 +15,6 @@ def img_transform(img, crop_size, upscale=1):
 def train_transform(img):
     return ToTensor()(img)
 
-def test_transform(img, crop_size, upscale=1):
-    return ToTensor()(img)
-
 def set_channel(l, n_channel):
     def _set_channel(img):
         if np.array(img).ndim == 2:
