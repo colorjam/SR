@@ -57,7 +57,7 @@ class checkpoint():
 
         _make_dir(self.dir)
         _make_dir(self.dir + '/model')
-        _make_dir(self.dir + '/results_{}'.format(self.args.loss))
+        _make_dir(self.dir + '/results_{}'.format(self.args.description))
 
         open_type = 'a' if os.path.exists(self.dir + '/log.txt') else 'w'
         self.log_file = open(self.dir + '/log.txt', open_type)
@@ -99,7 +99,7 @@ class checkpoint():
         torch.save(model.state_dict(), '{}/model/model_{}.pt'.format(self.dir, epoch))
     
     def save_result(self, idx, save_list):
-        filename = '{}/results_{}/{}_'.format(self.dir, self.args.loss, idx)
+        filename = '{}/results_{}/{}_'.format(self.dir, self.args.description, idx)
         scale = self.args.upscale
         if len(scale)>1:
             postfix = ('SR_x2', 'SR_x4', 'LR', 'HR_x2', 'HR_x4')
@@ -113,13 +113,8 @@ class checkpoint():
         self.log_file.write('\n')
         self.log_file.close()
 
-def quantize(img):
-    return img.clamp(0, 255).round()
 
 def calc_psnr(sr, hr, scale, benchmark=False):
-    '''
-        we measure PSNR on luminance channel only
-    '''
     diff = (sr - hr).data
     # print(diff[:, 0:, :, :])
     shave = scale
@@ -138,49 +133,7 @@ def calc_ssim(sr, hr, benchmark=False):
     sr = sr.data[0].squeeze().numpy().transpose(1, 2, 0)
     hr = hr.data[0].squeeze().numpy().transpose(1, 2, 0)
     return ssim(sr, hr, multichannel=True)
-    
-def augmentation(input, model, upscale):
 
-    def _totensor(x):
-        return Variable(torch.Tensor(x.copy()))
-
-    def _rotate(input, k=1, axes=(2, 3)): # (n, c, h, w)
-        img = input.data.cpu().numpy()
-        return _totensor(np.rot90(img, k=k, axes=axes).copy())
-
-    def _flip(input, axis=2):
-        img = input.data.cpu().numpy()
-        return _totensor(np.flip(img, axis=axis).copy())
-
-    inputlist = [input]
-    # rotate
-    for i in range(3):
-        inputlist.extend([_rotate(inputlist[-1], axes=(2, 3))])
-    # flip
-    inputlist.extend([_flip(input)])
-    for i in range(3):
-        inputlist.extend([_rotate(inputlist[-1], axes=(2, 3))])
-
-    outputlist = [[] for _ in upscale]
-    for input in inputlist:
-        output = model(input)
-        for i, o in enumerate(output):
-            outputlist[i].append(o)
-
-    for i in range(len(outputlist[0])):
-        k = i % 4
-        if k > 0:
-            for j in range(len(upscale)):
-                outputlist[j][i] = _rotate(outputlist[j][i], k=k, axes=(3, 2))
-        if i > 3:
-            for j in range(len(upscale)):
-                outputlist[j][i] = _flip(outputlist[j][i])
-
-    output = [[] for _ in upscale]
-    for j in range(len(upscale)):
-        output[j] = reduce((lambda x, y: x + y), outputlist[j]) / len(outputlist[j])
-
-    return output
 
             
 

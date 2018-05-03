@@ -34,9 +34,11 @@ parser.add_argument('--random', action='store_true',
 # Model specifications
 
 parser.add_argument('--model', type=str, default='EDSR',
-                    choices=('EDSR', 'DDBPN'),
-                    help='model to use (ESSR | DDBPN)')              
-parser.add_argument('--n_resblocks', type=int, default=3, 
+                    choices=('EDSR', 'DDBPN', 'DBPN'),
+                    help='model to use (ESSR | DDBPN | DBPN)')    
+parser.add_argument('--n_init', type=int, default=128, 
+                    help='number of initial features for ddbpn')          
+parser.add_argument('--n_blocks', type=int, default=3, 
                     help='number of residual blocks')
 parser.add_argument('--n_feats', type=int, default=64, 
                     help='number of feature maps')
