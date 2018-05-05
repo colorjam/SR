@@ -72,17 +72,18 @@ class BackProjection(nn.Module):
 class DBPN(nn.Module):
     def __init__(self, args):
         super().__init__()
-        scale = args.upscale[0]
+        self.scale = args.upscale[0]
+        self.args = args
 
         n0 = args.n_init # number of filters used in the initial LR features extraction
-        nr = args.n_feats # number of filters used in each projection unit.
+        self.nr = args.n_feats # number of filters used in each projection unit.
         self.depth = args.n_blocks
 
         # 1 Initial
         initial = [
             nn.Conv2d(args.n_colors, n0, 3, padding=1), # constuct initial feature-maps
             nn.ReLU(),
-            nn.Conv2d(n0, nr, 1), # reduce the dimention
+            nn.Conv2d(n0, self.nr, 1), # reduce the dimention
             nn.ReLU()
         ]
         self.initial = nn.Sequential(*initial)
@@ -92,16 +93,17 @@ class DBPN(nn.Module):
         self.downmodules = nn.ModuleList()
         for i in range(self.depth):
             self.upmodules.append(
-                BackProjection(nr, nr, scale, True, i > 1)
+                BackProjection(self.nr, self.nr, self.scale, True, i > 1)
             )
         for i in range(self.depth - 1):
             self.downmodules.append(
-                BackProjection(nr, nr, scale, False, i > 1)
+                BackProjection(self.nr, self.nr, self.scale, False, i > 1)
             )
 
         # 3 Reconstruction
         reconstruction = [
-            nn.Conv2d(self.depth * nr, args.n_colors, 3, padding=1) 
+            # nn.Conv2d(self.depth * self.nr, args.n_colors, 3, padding=1) 
+            nn.Conv2d(self.nr, args.n_colors, 3, padding=1) 
         ]
         self.reconstruction = nn.Sequential(*reconstruction)
 
@@ -115,14 +117,20 @@ class DBPN(nn.Module):
     def forward(self, x):
         l = self.initial(x)
         h_list = []
+
+        n, f, h, w = l.shape
+        h = torch.zeros(n, f, h * self.scale, w * self.scale)
+
         for i in range(self.depth - 1):
-            h_list.append(self.upmodules[i](l))
-            #print('l shape', l.shape)
-            #print('h shape', h_list[-1].shape)
-            l = self.downmodules[i](h_list[-1])
+            h += self.upmodules[i](l)
+            # h_list.append(self.upmodules[i](l))
+            # l = self.downmodules[i](h_list[-1])
+            l = self.downmodules[i](h)
         
-        h_list.append(self.upmodules[-1](l))
-        out = self.reconstruction(torch.cat(h_list, dim=1))
+        # h_list.append(self.upmodules[-1](l))
+        # out = self.reconstruction(torch.cat(h_list, dim=1))
+        h = self.upmodules[-1](l)
+        out = self.reconstruction(h)
 
         return [out]
 

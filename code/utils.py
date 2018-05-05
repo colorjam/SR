@@ -99,12 +99,16 @@ class checkpoint():
         torch.save(model.state_dict(), '{}/model/model_{}.pt'.format(self.dir, epoch))
     
     def save_result(self, idx, save_list):
-        filename = '{}/results_{}/{}_'.format(self.dir, self.args.description, idx)
+        if self.args.result_path != '.':
+            filename = '{}'.format(self.args.result_path)
+        else:
+            filename = '{}/results_{}/{}_'.format(self.dir, self.args.description, idx)
+            
         scale = self.args.upscale
         if len(scale)>1:
             postfix = ('SR_x2', 'SR_x4', 'LR', 'HR_x2', 'HR_x4')
         else:
-            postfix = ('SR_x{}'.format(scale[0]), 'LR', 'HR_x{}'.format(scale[0]))
+            postfix = ('SR_{}'.format(self.args.description), 'LR', 'HR_{}'.format(self.args.description))
 
         for v, n in zip(save_list, postfix):
             tu.save_image(v.data[0], '{}{}.png'.format(filename, n))

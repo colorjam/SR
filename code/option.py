@@ -75,6 +75,8 @@ parser.add_argument('--pre_train', type=str, default='.',
                     help='load pre-trained model to test')
 parser.add_argument('--save', action='store_true', 
                     help='save the model result')
+parser.add_argument('--result_path', type=str, default='.', 
+                    help='save result to specific path')
 
 args = parser.parse_args()
 print(args)

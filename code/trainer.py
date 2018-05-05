@@ -4,8 +4,7 @@ from torch.autograd import Variable
 import torch.nn.functional as F
 
 import utils   
-from tqdm import tqdm
-from logger import Logger, to_np
+# from logger import Logger, to_np
 
 class Trainer():
     def __init__(self, args, loader, model, criterion, optimizer, ckp):
@@ -29,7 +28,7 @@ class Trainer():
             else:
                 return self.model(x)
 
-        logger = Logger(self.args.log_file)
+        # logger = Logger(self.args.log_file)
         epoch_loss = 0.0
         timer_data, timer_model = utils.timer(), utils.timer()
         for iteration, (input, hr) in enumerate(self.loader_train, 1):
