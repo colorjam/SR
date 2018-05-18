@@ -1,0 +1,36 @@
+<!DOCTYPE html>  
+<html lang="en">  
+<head>  
+    <meta charset="UTF-8">  
+    <title>SR System</title>  
+    <link rel=stylesheet type=text/css href="/static/style.css">
+</head>  
+<body>  
+    <div class='image-box'>
+        <div class='LR'>
+            <img src="static/images/LR.png"> 
+            <p>LR</p>
+        </div>
+        {% if scale =='2+4' %}
+            <span class='scale'>× 2 = </span> 
+            <div class='SR'>
+                <img src="static/images/SR_x2.png">
+                <p>SR_2×</p>
+            </div>
+            <span class='scale'>× 4 = </span> 
+            <div class='SR'>
+                <img src="static/images/SR_x4.png">
+                <p>SR_4×</p>
+            </div>
+        {% else %}
+            <span class='scale'>× {{scale}} = </span> 
+            <div class='SR'>
+                <img src="static/images/SR_demo.png">
+                <p>SR_{{scale}}×</p>
+            </div>
+        {% endif%}
+    </div> 
+    <p class='time'>Time: {{time}}s</p>
+</body>  
+</html>  
+

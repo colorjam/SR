@@ -1,0 +1,33 @@
+<!DOCTYPE html>  
+<html lang="en">  
+<head>  
+    <meta charset="UTF-8">  
+    <title>SR System</title>  
+    <link rel=stylesheet type=text/css href="/static/style.css">
+</head>  
+<body>   
+    <form class='upload-box' method="POST" enctype="multipart/form-data">
+        <div class="model-panel">
+            <h2>请选择模型结构</h2>
+            <div class='select-model'>
+                <span>网络模型：</span>
+                {{ form.model }}
+            </div>
+            <div class='select-model'>
+                <span>放大倍率：</span>
+                {{ form.scale }}
+            </div>
+        </div>
+        <div class="image-panel">
+            <h2>请上传一张图片</h2>
+            {{ form.photo }}
+            {% for error in form.photo.errors %}
+                <span style="color: red;">{{ error }}</span>
+            {% endfor %}
+            {{ form.submit(class='form-submit') }}
+        </div>
+    </form>
+    <div class="loader">Loading...</div>
+    <script src = "/static/demo.js"></script> 
+</body>  
+</html>  

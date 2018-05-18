@@ -106,7 +106,7 @@ class checkpoint():
             
         scale = self.args.upscale
         if len(scale)>1:
-            postfix = ('SR_x2', 'SR_x4', 'LR', 'HR_x2', 'HR_x4')
+            postfix = ('{}_x2'.format(self.args.description), '{}_x4'.format(self.args.description))
         else:
             postfix = ('SR_{}'.format(self.args.description), 'LR', 'HR_{}'.format(self.args.description))
 
@@ -117,6 +117,29 @@ class checkpoint():
         self.log_file.write('\n')
         self.log_file.close()
 
+
+def rgb2ycbcr(rgb): # Tensor of [N, C, H, W]
+    rgb = ToPILImage()(rgb.squeeze())
+    y, cb, cr = rgb.convert('YCbCr').split()
+    # y = Variable(ToTensor()(y).unsqueeze(0))
+    return np.asarray(y)
+
+# def calc_psnr(input, target, scale):
+#     # evaluate these datasets in y channel only
+#     print(input.data.size())
+#     _,c, h, w = input.data.size()
+#     diff = input - target
+#     shave = scale
+#     if c > 1:
+#         input_Y = rgb2ycbcr(input.cpu())[0]
+#         target_Y = rgb2ycbcr(target.cpu())[0]
+#         diff = (input_Y.data - target_Y.data).view(1, h, w)
+
+#     diff = diff[:, shave:(h - shave), shave:(w - shave)]
+#     mse = diff.pow(2).mean()
+#     psnr = -10 * np.log10(mse)
+
+#     return psnr
 
 def calc_psnr(sr, hr, scale, benchmark=False):
     diff = (sr - hr).data
@@ -134,9 +157,9 @@ def calc_psnr(sr, hr, scale, benchmark=False):
     return -10 * math.log10(mse)
 
 def calc_ssim(sr, hr, benchmark=False):
-    sr = sr.data[0].squeeze().numpy().transpose(1, 2, 0)
-    hr = hr.data[0].squeeze().numpy().transpose(1, 2, 0)
-    return ssim(sr, hr, multichannel=True)
+    y_sr = rgb2ycbcr(sr.data)
+    y_hr = rgb2ycbcr(hr.data)
+    return ssim(y_hr, y_sr)
 
 
             

@@ -18,4 +18,4 @@ class Model:
         elif loss == 'Robust':
             self.criterion = module_loss.Robust_loss()
         elif loss == 'Perceptual':
-            self.criterion = module_loss.Squeeze_loss()
+            self.criterion = module_loss.VGG_loss()

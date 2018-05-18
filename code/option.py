@@ -32,7 +32,8 @@ parser.add_argument('--random', action='store_true',
 
 
 # Model specifications
-
+parser.add_argument('--deconv', action='store_true', 
+                    help='use deconvolution in dbpn?')
 parser.add_argument('--model', type=str, default='EDSR',
                     choices=('EDSR', 'DDBPN', 'DBPN'),
                     help='model to use (ESSR | DDBPN | DBPN)')    

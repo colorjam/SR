@@ -1,4 +1,4 @@
-# python main.py --test --data_test Set5 --pre_train ../eval/data_aug_new/model_flip_jitter_new.pt --n_blocks 12 --save --description 'color_jitter' --upscale 4 --model EDSR  --loss L1 --n_feats 96 --n_init 128
+python main.py --test --data_test Set5 --pre_train ../models/DBPN_2+4.pt --n_blocks 2 --save --description 'DBPN_multi' --upscale 2+4 --model DBPN --loss Robust --n_feats 32 --n_init 128 --deconv
 # python main.py --test --data_test Demo --pre_train ../eval/edsr_loss/model_L1.pt --n_blocks 12 --save --description 'test' --upscale 4 --model EDSR  --loss L1 --n_feats 96 --n_init 128 --result_path ./static/
 # python main.py --resume 2 --epochs 8 --crop_size 64 --n_blocks 2 --train_batch 10 --loss L1 --data_train DIV2K --n_train 100 --data_test Set5 --print_freq 2 --test_freq 1 --description 'continue train aug data from epoch 2' --upscale 2 
-python main.py --epochs 10 --crop_size 32 --n_blocks 2 --n_feats 32 --n_init 64 --train_batch 10 --loss L1 --data_train DIV2K --data_test Set5 --print_freq 2 --description 'test DBPN' --upscale 4 --n_train 200 --test_freq 1 --model DBPN --reset 
+# python main.py --epochs 10 --crop_size 32 --n_blocks 2 --n_feats 16 --n_init 32 --train_batch 10 --loss L1 --data_train DIV2K --data_test Set5 --print_freq 2 --description 'DBPN_2+4' --upscale 2+4 --n_train 200 --test_freq 1 --model DBPN --reset 
